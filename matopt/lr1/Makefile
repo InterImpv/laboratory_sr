@@ -1,5 +1,6 @@
 CC := gcc
 CFLAGS := -Wall -std=gnu18 -lm
+DEPS := error.h func.h
 OBJS := main.o
 
 PROJ_NAME := main
