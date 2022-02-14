@@ -8,8 +8,9 @@
 #include <assert.h>
 
 /* ratio */
-const double GOLDEN_RATIO = (1 + sqrt(5)) / 2;
-const double INV_GOLDEN_RATIO = 1 / GOLDEN_RATIO;
+const double GOLDEN_RATIO = (-1 + sqrt(5)) / 2;
+/* epsilon */
+const double MAX_EPSILON = 0.00000001;
 
 /* quality of life container */
 typedef struct range_container {
@@ -19,8 +20,10 @@ typedef struct range_container {
 range_t *range_create(void)
 {
 	range_t *ret = malloc(sizeof(*ret));
-	assert(NULL != ret);
-
+	if (NULL == ret) {
+		fprintf(stderr, "ERR %u: failed to initalize <range_t>\n", E_INIT);
+		return NULL;
+	}
 	return ret;
 }
 
@@ -64,19 +67,18 @@ enum GEN_ERR div_gratio(range_t *this, double (*func_ptr)(double), bool (*condit
 	double b = this->b;
 	/* division temp points */
 	double x1, x2;
-
 	/* iterate until epsilon is satisfied */
 	for (uint32_t i = 0; fabs(b - a) > eps; i++) {
-		x1 = b - (b - a) * INV_GOLDEN_RATIO;
-		x2 = a + (b - a) * INV_GOLDEN_RATIO;
+		x1 = a + (b - a) * GOLDEN_RATIO;
+		x2 = b - (b - a) * GOLDEN_RATIO;
 
 		/* find by condition */
 		if (condition(func(x1), func(x2)))
-			a = x1;
+			a = x2;
 		else
-			b = x2;
+			b = x1;
 
-		printf("[%u]:\ta = %.5lf,\tb = %.5lf\n", i, a, b);
+		printf("[%u]:\ta = %.5lf,\tb = %.5lf\n", i + 1, a, b);
 	}
 	range_set(this, a, b);
 
@@ -85,8 +87,10 @@ enum GEN_ERR div_gratio(range_t *this, double (*func_ptr)(double), bool (*condit
 
 int main(int argc, char **argv)
 {
+	/* should've used <argp.h>, but it bloats everything */
 	if (argc != 5) {
 		fprintf(stderr, "ERR %u: not enough arguments\n", E_ARG);
+		printf("Usage\n\n\t./main [min|max] <a> <b> <eps>\n\n");
 		return E_ARG;
 	}
 
@@ -106,12 +110,15 @@ int main(int argc, char **argv)
 	double b = atof(argv[3]);
 	/* accuracy */
 	double accuracy = atof(argv[4]);
-	if (accuracy < 0.00000001) {
+	if (accuracy < MAX_EPSILON) {
 		fprintf(stderr, "ERR %u: invalid accuracy \"%.8lf\"\n", E_ARG, accuracy);
 		return E_ARG;
 	}
 
 	range_t *range = range_create();
+	if (NULL == range)
+		return E_INIT;
+
 	range_set(range, a, b);
 
 	/* find optimum */
@@ -124,9 +131,9 @@ int main(int argc, char **argv)
 	double x = range->a + (range->b - range->a) / 2;
 
 	printf("\n");
-	printf("Ratio:\tr = %.8lf, i = %.8lf\n", GOLDEN_RATIO, INV_GOLDEN_RATIO);
-	printf("Range:\ta = %.8lf, b = %.8lf\n", range->a, range->b);
-	printf("Center:\tx = %.8lf, f(x) = %.8lf\n", x, func(x));
+	printf("Ratio:\tr = %.8lf\n", GOLDEN_RATIO);
+	printf("Range:\ta = %.8lf,\tb = %.8lf\n", range->a, range->b);
+	printf("Center:\tx = %.8lf,\ty = %.8lf\n", x, func(x));
 
 	range_free(range);
 
